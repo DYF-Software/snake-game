@@ -1,110 +1,227 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yılan Oyunu - Playable Ad</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #222;
-            flex-direction: column;
-            color: white;
-            font-family: Arial, sans-serif;
-            overflow: hidden;
-            margin: 0;
-        }
-        canvas {
-            background-color: black;
-        }
-        #coupon {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            color: black;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geliştirilmiş Yılan Oyunu</title>
+  <style>
+    /* Animasyonlu Gradient Arka Plan */
+    @keyframes gradientAnimation {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    body {
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(270deg, #1f1c2c, #928dab, #1f1c2c);
+      background-size: 600% 600%;
+      animation: gradientAnimation 20s ease infinite;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    /* Responsive canvas: Maksimum 400px, mobilde ölçeklenebilir */
+    canvas {
+      background-color: transparent;
+      border: 2px solid #fff;
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+      width: 90vw;
+      max-width: 400px;
+      height: 90vw;
+      max-height: 400px;
+    }
+    /* Hediye (Kupon) ekranı stili */
+    #coupon {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      color: #333;
+      padding: 20px 30px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      font-size: 1.2rem;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    #coupon.show {
+      opacity: 1;
+      display: block;
+    }
+  </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="400" height="400"></canvas>
-    <div id="coupon">Tebrikler! Kupon Kodu: <b>HEDIYE100</b></div>
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const box = 20;
-        let snake = [{ x: 10 * box, y: 10 * box }];
-        let direction = "RIGHT";
-        let nextDirection = "RIGHT";
-        let food = {
-            x: Math.floor(Math.random() * 20) * box,
-            y: Math.floor(Math.random() * 20) * box
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+  <div id="coupon">Tebrikler! Kupon Kodu: <b>HEDIYE100</b></div>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const box = 20;
+    
+    let snake = [];
+    let direction = "RIGHT";
+    let nextDirection = "RIGHT";
+    let food = {};
+    let score = 0;
+    let lastTime = 0;
+    const interval = 100; // Güncelleme aralığı (ms)
+    let gameRunning = true; // Oyun çalışıyor mu?
+
+    // Oyunu sıfırlayan fonksiyon: yılanı ortada başlatır, skoru ve yönleri resetler
+    function resetGame() {
+      snake = [{ x: 10 * box, y: 10 * box }];
+      direction = "RIGHT";
+      nextDirection = "RIGHT";
+      score = 0;
+      food = {
+        x: Math.floor(Math.random() * 20) * box,
+        y: Math.floor(Math.random() * 20) * box
+      };
+      gameRunning = true;
+    }
+    
+    // İlk oyunun başlatılması
+    resetGame();
+    
+    // Klavye kontrolü
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowUp" && direction !== "DOWN") nextDirection = "UP";
+      else if (event.key === "ArrowDown" && direction !== "UP") nextDirection = "DOWN";
+      else if (event.key === "ArrowLeft" && direction !== "RIGHT") nextDirection = "LEFT";
+      else if (event.key === "ArrowRight" && direction !== "LEFT") nextDirection = "RIGHT";
+    });
+    
+    // Dokunmatik kontrol: Mobil uyumluluk için swipe hareketi
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    canvas.addEventListener("touchstart", (e) => {
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+    });
+    
+    canvas.addEventListener("touchend", (e) => {
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0 && direction !== "LEFT") nextDirection = "RIGHT";
+        else if (dx < 0 && direction !== "RIGHT") nextDirection = "LEFT";
+      } else {
+        if (dy > 0 && direction !== "UP") nextDirection = "DOWN";
+        else if (dy < 0 && direction !== "DOWN") nextDirection = "UP";
+      }
+    });
+    
+    // Yuvarlatılmış dikdörtgen çizimi
+    function drawRoundedRect(x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+    
+    // Yiyeceği dairesel gradient ile çizme
+    function drawFood(x, y) {
+      const centerX = x + box / 2;
+      const centerY = y + box / 2;
+      const gradient = ctx.createRadialGradient(centerX, centerY, box * 0.1, centerX, centerY, box * 0.5);
+      gradient.addColorStop(0, "yellow");
+      gradient.addColorStop(1, "red");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, box / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Oyun döngüsü
+    function gameLoop(timestamp) {
+      if (!gameRunning) return; // Oyun durduysa döngü sonlanır
+      if (!lastTime) lastTime = timestamp;
+      const deltaTime = timestamp - lastTime;
+      if (deltaTime > interval) {
+        lastTime = timestamp;
+        update();
+      }
+      requestAnimationFrame(gameLoop);
+    }
+    
+    function update() {
+      direction = nextDirection;
+      let snakeX = snake[0].x;
+      let snakeY = snake[0].y;
+    
+      if (direction === "UP") snakeY -= box;
+      else if (direction === "DOWN") snakeY += box;
+      else if (direction === "LEFT") snakeX -= box;
+      else if (direction === "RIGHT") snakeX += box;
+    
+      const newHead = { x: snakeX, y: snakeY };
+    
+      // Çarpışma kontrolü: Duvar veya kendine temas
+      if (
+        snakeX < 0 || snakeY < 0 ||
+        snakeX >= canvas.width || snakeY >= canvas.height ||
+        snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)
+      ) {
+        alert("Oyun Bitti! Skor: " + score);
+        resetGame();
+        return;
+      }
+    
+      snake.unshift(newHead);
+    
+      // Yiyecek yenme kontrolü
+      if (snakeX === food.x && snakeY === food.y) {
+        score += 10;
+        food = {
+          x: Math.floor(Math.random() * 20) * box,
+          y: Math.floor(Math.random() * 20) * box
         };
-        let score = 0;
-
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "ArrowUp" && direction !== "DOWN") nextDirection = "UP";
-            if (event.key === "ArrowDown" && direction !== "UP") nextDirection = "DOWN";
-            if (event.key === "ArrowLeft" && direction !== "RIGHT") nextDirection = "LEFT";
-            if (event.key === "ArrowRight" && direction !== "LEFT") nextDirection = "RIGHT";
-        });
-
-        function draw() {
-            direction = nextDirection;
-            let snakeX = snake[0].x;
-            let snakeY = snake[0].y;
-
-            if (direction === "UP") snakeY -= box;
-            if (direction === "DOWN") snakeY += box;
-            if (direction === "LEFT") snakeX -= box;
-            if (direction === "RIGHT") snakeX += box;
-
-            let newHead = { x: snakeX, y: snakeY };
-            
-            if (
-                snakeX < 0 || snakeY < 0 || snakeX >= canvas.width || snakeY >= canvas.height ||
-                snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)
-            ) {
-                clearInterval(game);
-                alert("Oyun Bitti! Skor: " + score);
-                location.reload();
-                return;
-            }
-
-            snake.unshift(newHead);
-            
-            if (snakeX === food.x && snakeY === food.y) {
-                score += 10;
-                food = {
-                    x: Math.floor(Math.random() * 20) * box,
-                    y: Math.floor(Math.random() * 20) * box
-                };
-                if (score >= 100) {
-                    document.getElementById("coupon").style.display = "block";
-                    clearInterval(game);
-                }
-            } else {
-                snake.pop();
-            }
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "red";
-            ctx.fillRect(food.x, food.y, box, box);
-            ctx.fillStyle = "lime";
-            snake.forEach((segment) => {
-                ctx.fillRect(segment.x, segment.y, box, box);
-            });
+        // Hediye koşulu: skor 100 veya üstü olduğunda hediye ekranı çıkar ve oyun biter
+        if (score >= 100) {
+          document.getElementById("coupon").classList.add("show");
+          gameRunning = false;
+          return;
         }
-
-        let game = setInterval(draw, 100);
-    </script>
+      } else {
+        snake.pop();
+      }
+      
+      draw();
+    }
+    
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawFood(food.x, food.y);
+    
+      ctx.shadowColor = "rgba(0, 255, 0, 0.5)";
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = "lime";
+      snake.forEach(segment => {
+        drawRoundedRect(segment.x, segment.y, box, box, 5);
+      });
+      ctx.shadowBlur = 0;
+    }
+    
+    requestAnimationFrame(gameLoop);
+  </script>
 </body>
 </html>
