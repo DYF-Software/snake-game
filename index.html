@@ -136,6 +136,39 @@
     let lastTime = 0;
     const interval = 100;
     let gameRunning = false;
+// Mobil cihazlar için kaydırma hareketleri (Swipe Gesture) ekleme
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+
+document.addEventListener("touchstart", (event) => {
+  touchStartX = event.touches[0].clientX;
+  touchStartY = event.touches[0].clientY;
+});
+
+document.addEventListener("touchmove", (event) => {
+  touchEndX = event.touches[0].clientX;
+  touchEndY = event.touches[0].clientY;
+});
+
+document.addEventListener("touchend", () => {
+  let diffX = touchEndX - touchStartX;
+  let diffY = touchEndY - touchStartY;
+
+  if (Math.abs(diffX) > Math.abs(diffY)) {
+    if (diffX > 0 && direction !== "LEFT") nextDirection = "RIGHT";
+    else if (diffX < 0 && direction !== "RIGHT") nextDirection = "LEFT";
+  } else {
+    if (diffY > 0 && direction !== "UP") nextDirection = "DOWN";
+    else if (diffY < 0 && direction !== "DOWN") nextDirection = "UP";
+  }
+});
+
+// Sayfa kaymasını engelle (Mobilde oynarken yukarı/aşağı kaymayı önler)
+document.addEventListener("touchmove", (event) => {
+  event.preventDefault();
+}, { passive: false });
 
     startButton.addEventListener("click", () => {
       startScreen.style.display = "none";
@@ -243,20 +276,26 @@
     }
 
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Dairesel meyve çizimi
-      drawFood(food.x, food.y);
-      
-      // Yılanın boğumlu olması için yuvarlatılmış dikdörtgenlerle çizelim
-      ctx.shadowColor = "rgba(0, 255, 0, 0.5)";
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = "lime";
-      snake.forEach(segment => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Skoru sol üst köşeye yazdır
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText("Skor: " + score, 10, 25);
+
+    // Dairesel meyve çizimi
+    drawFood(food.x, food.y);
+    
+    // Yılanın boğumlu olması için yuvarlatılmış dikdörtgenlerle çizelim
+    ctx.shadowColor = "rgba(0, 255, 0, 0.5)";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "lime";
+    snake.forEach(segment => {
         drawRoundedRect(segment.x, segment.y, box, box, 5);
-      });
-      ctx.shadowBlur = 0;
-    }
+    });
+    ctx.shadowBlur = 0;
+}
+
     document.getElementById("copyButton").addEventListener("click", function () {
   navigator.clipboard.writeText(document.getElementById("couponCode").innerText).then(() => {
     alert("Kupon kopyalandı! 🎉");
