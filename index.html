@@ -185,7 +185,7 @@
       else if (direction === "RIGHT") snakeX += box;
 
       const newHead = { x: snakeX, y: snakeY };
-      if (score >= 20) {
+      if (score >= 100) {
   document.getElementById("winMessage").classList.add("show");
   document.getElementById("winMessage").style.display = "block";
   gameRunning = false;
