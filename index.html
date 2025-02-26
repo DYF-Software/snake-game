@@ -60,9 +60,54 @@
     #startButton:hover {
       background: #00cc00;
     }
+    #winMessage {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  background: white;
+  color: black;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+  font-size: 1.2rem;
+  transition: transform 0.5s ease-in-out;
+}
+#winMessage.show {
+  transform: translate(-50%, -50%) scale(1);
+}
+#couponCode {
+  background: #eee;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-weight: bold;
+  margin: 10px 0;
+}
+#copyButton {
+  background: #00ff00;
+  color: black;
+  border: none;
+  padding: 5px 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: 0.3s;
+}
+#copyButton:hover {
+  background: #00cc00;
+}
+
   </style>
 </head>
 <body>
+  <div id="winMessage">
+    <p>Tebrikler! Kazandınız 🎉</p>
+    <div id="couponCode">HEDIYE100</div>
+    <button id="copyButton">Kopyala</button>
+  </div>
+  
   <div id="startScreen">
     <h1>Yılan Oyunu</h1>
     <p>🎮 Oyun Kuralları:</p>
@@ -140,6 +185,12 @@
       else if (direction === "RIGHT") snakeX += box;
 
       const newHead = { x: snakeX, y: snakeY };
+      if (score >= 20) {
+  document.getElementById("winMessage").classList.add("show");
+  document.getElementById("winMessage").style.display = "block";
+  gameRunning = false;
+  return;
+}
 
       if (
         snakeX < 0 || snakeY < 0 ||
@@ -206,6 +257,12 @@
       });
       ctx.shadowBlur = 0;
     }
+    document.getElementById("copyButton").addEventListener("click", function () {
+  navigator.clipboard.writeText(document.getElementById("couponCode").innerText).then(() => {
+    alert("Kupon kopyalandı! 🎉");
+  });
+});
+
   </script>
 </body>
 </html>
